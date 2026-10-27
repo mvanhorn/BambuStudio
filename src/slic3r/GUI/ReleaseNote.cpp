@@ -6,6 +6,7 @@
 #include "libslic3r/Thread.hpp"
 #include "GUI.hpp"
 #include "GUI_App.hpp"
+#include "DeviceCore/DevHMSQuery.h"
 #include "GUI_Preview.hpp"
 #include "MainFrame.hpp"
 #include "format.hpp"
@@ -992,7 +993,7 @@ void PrintErrorDialog::update_text_image(const wxString& text, const wxString& e
     m_vebview_release_note->SetSizer(sizer_text_release_note);
 
     if (!image_url.empty()) {
-        const wxImage& img = wxGetApp().get_hms_query()->query_image_from_local(image_url);
+        const wxImage& img = wxGetApp().get_hms_query_mgr()->query_image_from_local(image_url);
         if (!img.IsOk() && image_url.Contains("http"))
         {
             web_request = wxWebSession::GetDefault().CreateRequest(this, image_url);
@@ -1758,6 +1759,8 @@ InputIpAddressDialog::InputIpAddressDialog(wxWindow *parent)
     Layout();
     Fit();
 
+    // for some reason Fit() failed its job here so we do this again
+    SetSize(GetBestSize());
     CentreOnParent(wxBOTH);
     Move(wxPoint(GetScreenPosition().x, GetScreenPosition().y - FromDIP(50)));
     wxGetApp().UpdateDlgDarkUI(this);
@@ -1772,11 +1775,10 @@ InputIpAddressDialog::InputIpAddressDialog(wxWindow *parent)
         m_status_bar->reset();
         EndModal(wxID_YES);
     });
-    Bind(wxEVT_CLOSE_WINDOW, [this](auto& e) {
+    Bind(wxEVT_CLOSE_WINDOW, [this](auto &e) {
         on_cancel();
         closeTimer->Stop();
     });
-
 }
 
 void InputIpAddressDialog::switch_input_panel(int index)
@@ -1824,8 +1826,13 @@ void InputIpAddressDialog::set_machine_obj(MachineObject* obj)
     m_input_ip->GetTextCtrl()->SetLabelText(m_obj->get_dev_ip());
     m_input_access_code->GetTextCtrl()->SetLabelText(m_obj->get_access_code());
 
+    /* The printer config may be missing for unknown printer types, fall back to a default image,
+       otherwise create_scaled_bitmap() throws and the exception escapes to the message loop */
     std::string img_str = DevPrinterConfigUtil::get_printer_connect_help_img(m_obj->printer_type);
-    auto diagram_bmp = create_scaled_bitmap(img_str + "_en", this, 198);
+    if (img_str.empty()) { img_str = "input_access_code_x1"; }
+
+    std::string language = wxGetApp().app_config->get("language");
+    auto diagram_bmp = create_scaled_bitmap(img_str + (language == "zh_CN" ? "_cn" : "_en"), this, 198);
     m_img_help->SetBitmap(diagram_bmp);
 
 

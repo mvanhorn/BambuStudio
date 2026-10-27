@@ -1053,7 +1053,7 @@ void WebViewPanel::ShowNetpluginTip()
 
     wxString strJS = wxString::Format("window.postMessage(%s)", m_Res.dump(-1, ' ', false, json::error_handler_t::ignore));
 
-    RunScriptLeft(strJS);
+    RunScriptLeft(strJS, true);
 }
 
 void WebViewPanel::get_design_staffpick(int offset, int limit, std::function<void(std::string)> callback)
@@ -1830,6 +1830,8 @@ bool WebViewPanel::IsAllowedScriptCommand(wxWebViewEvent& evt)
         "homepage_makerlab_open_3mf_binary",
         "homepage_makerlab_stl_download",
         "common_openurl",  // MakerLab pages use this to open external links (e.g. "Support Creator", "open in browser")
+        "makerworld_model_open",
+        "homepage_login_or_register",
     };
     static const std::set<std::string> kMakerWorldAllowed = {
         "makerworld_model_open",
@@ -1839,6 +1841,8 @@ bool WebViewPanel::IsAllowedScriptCommand(wxWebViewEvent& evt)
         // Used by the MakerWorld search page "back to model library" button to
         // notify the left-menu panel to switch back to the home/online view.
         "homepage_leftmenu_switch",
+        "get_web_shortcut",
+        "homepage_login_or_register",
     };
 
     // Avoid full JSON parse here — MakerLab STL/3mf payloads can be multi-MB base64.
@@ -1963,7 +1967,7 @@ void WebViewPanel::RunScript(const wxString& javascript)
     WebView::RunScript(m_browser, javascript);
 }
 
-void WebViewPanel::RunScriptLeft(const wxString &javascript)
+void WebViewPanel::RunScriptLeft(const wxString &javascript, bool force_execute)
 {
     // Remember the script we run in any case, so the next time the user opens
     // the "Run Script" dialog box, it is shown there for convenient updating.
@@ -1971,7 +1975,7 @@ void WebViewPanel::RunScriptLeft(const wxString &javascript)
 
     if (!m_browserLeft) return;
 
-    WebView::RunScript(m_browserLeft, javascript);
+    WebView::RunScript(m_browserLeft, javascript, force_execute);
 }
 
 
@@ -2249,7 +2253,7 @@ void WebViewPanel::SwitchWebContent(std::string modelname, int refresh)
         std::string strRegion = wxGetApp().app_config->get_country_code();
         wxString    MakerSupplyUrl;
         if (strRegion == "CN")
-            MakerSupplyUrl = "https://bambulab.tmall.com/category-1761686934.htm?from=bambustudio&from=mw_homepage_ms";
+            MakerSupplyUrl = "https://mall.jd.com/view_search-2380482-25151560-99-1-20-1.html";
         else
             MakerSupplyUrl = "https://store.bambulab.com/collections/makers-supply?from=bambustudio&from=mw_homepage_ms";
 
